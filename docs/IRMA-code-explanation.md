@@ -417,10 +417,9 @@ As the default `SORT_PROG` is the same as the `MATCH_PROG`, it assumes that this
     - **Output**:
       - `R1-A_HA_H1_001.sto`: .sto: Stockholm format is a multiple sequence alignment format used by Pfam, Rfam and Dfam, to disseminate protein, RNA and DNA sequence alignments. The alignment editors Ralee, Belvu and Jalview support Stockholm format as do the probabilistic database search tools, Infernal and HMMER, and the phylogenetic analysis tool Xrate. Como está binario no lo puedo ver. Jalview me dice que el formato es antiguo y tampoco me deja verlo.
 
-
 ##### 1.4.2. Create new reference
 
-11. _combineALIGNstats_: Uses base frequency statistics for each alignment position (.sto) and selects the most common base as the consensus base at that position.
+11. _combineALIGNstats_: Uses base frequency statistics for each alignment position (.sto) and selects the most common base as the consensus base at that position. In this script, the nucleotide (base) with higher depth (majority allele) is goig to be used as "reference". In the case that the second most common allele has an allele frequency higher than MIN_FA, that allele is going to be used as "reference" allele.
 
     - Uses **options** from the configuration in this step such as:
       - `SKIP_E`: Skip elongation/extension at 5′ and 3′ ends. Used during read collection phase.
