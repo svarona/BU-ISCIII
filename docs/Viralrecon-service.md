@@ -4,34 +4,63 @@ Once the service has been [accepted in iSkyLIMS](https://github.com/BU-ISCIII/BU
 
 Log in with your HPC user.
 
-Load the buisciii-tools environment.
+Load the buisciii-tools environment (select the environment with the most recent version of buisciii-tools).
 
-    $ conda activate buisciii-tools
+    $ micromamba env list | grep buisciii
+    $ micromamba activate buisciii-tools_X.X.X
 
-Create the service and the needed folder structure. Select the **Viralrecon** template.
+Create the service and the needed folder structure. Run the "new-service" module, selecting **ALL** option in order to add **Viralrecon** and **Taxprofiler** templates to the folder structure.
 
-    $ bu-isciii new-service SRVCNMXXX.X
+    $ buisciii new-service SRVCNMXXX.X
     > Viralrecon
 
-> Note: If the resolution ID is not specified, it will be requested via the prompt.
+By default, **a `.log` file from this module's execution will be saved for tracking purposes in the service folder that will be created within `services_and_colaborations`**. This log file will have the following structure: `SRVCNMXXX.X.tool.log`, where `tool` is the name of the buisciii-tools module being launched. For instance, the log file will be named `SRVCNMXXX.X.new-service.log` if the module you are launching is `new-service`.
 
-If the service configuration is correct and the sequences are located in `/srv/fastq_repo`, move inside the newly created folder at `/data/bi/services_and_colaborations/CNM/virology/`. Check the `/RAW` folder to verify that symbolic links have been correctly created for all service samples.
+>[!NOTE]
+>If you need the `.log` file to be saved in your PWD for any reason, or you want it to have a different name, use the option `--log-file` and indicate the name of your log file, for example:
+>```
+>buisciii --log-file SRVCNMXXX.X.tool.log new-service SRVCNMXXX.X
+>```
 
-Move to `/ANALYSIS`. Configure the `samples_ref.txt` file according to the service requirements (samples, reference genomes, hosts, etc.). Check the lablog and execute it.
+If the service configuration is correct and the sequences are located in `/srv/fastq_repo`, copy de log inside the newly created folder at `/data/ucct/bi/services_and_colaborations/CNM/virology/` and move in. Check the `/RAW` folder to verify that symbolic links have been correctly created for all service samples.
 
-    $ bash lablog_viralrecon
+Move to `/ANALYSIS`. In case the pipeline is going to use several references, configure the `samples_ref.txt` file according to the service requirements (samples, reference genomes, hosts, etc.).
 
-This script prompts the user for the type of analysis to be performed (AMPLICONS or METAGENOMICS), sets up the configuration files in the `../DOC` folder and creates a folder for each host specified in samples_ref.txt (usually only 1).
+> **Note:** In the case of a single reference, the `samples_ref.txt` file configuration can be made during lablog_viralrecon execution, either by specifying the reference and host as arguments when running the lablog, or by entering this information at the terminal when prompted if interactive mode is used (explanation below).
+
+The file shall be structured as follows:
+
+        SampleID	Reference	Host
+        SampleID	Reference	Host
+        SampleID	Reference	Host
+        ...
+
+The columns are spaced with a tabulation (this is critical for the proper functioning of the pipeline). This file must include all samples to be tested, as well as the references to be used, and the host organism from which the samples have been collected. It is possible that the same sample will appear several times, in cases where this sample needs to be analysed with several references. This would be an example of a configured `samples_ref.txt` file:
+
+        SAR00001    MH173047.1  human
+        SAR00001    KX838946.2  human
+        SAR00077    MH173047.1  human
+        SAR00088    MH173047.1  human
+        SAR00099    MH173047.1  human
+ 
+Once the `samples_ref.txt` file is set up , check the `lablog_viralrecon` and execute it.
+
+This script shall configure the viralrecon service according to the nature of the sequencing data (**AMPLICONS** or **METAGENOMICS**), the analysis method to be used (mapping, de novo assembly) and, when necessary, the kind of virus contained in the samples (SARS-CoV-2, RSV, etc.). Depending on this information, running this lablog sets up the configuration files in the `../DOC` folder and creates a folder for each host specified in samples_ref.txt (usually only 1).
+
+If this script is run without specifying any arguments, it will be executed interactively, querying the user for the necessary information for the configuration of the service through prompts in the terminal. Alternatively, it is possible to run the script in a non-interactive way, adding specific arguments that directly provide the necessary information (if a critical argument for the configuration of the service is omitted, the user will still be prompted by the terminal for the necessary information). To find out about the available options, please refer to the help menu by using `bash lablog_viralrecon -h`.
+
+
+    $ bash lablog_viralrecon [options]
 
 > Note: In case the service has special requirements, additional configurations may be necessary.
 
-Edit the folder name `YYMMDD_ANALYSIS_0X_MAG` based on the number of analyses to be performed. If only one host exists, it shall be set as `YYMMDD_ANALYSIS_02_MAG`.
+Check the `lablog_taxprofiler` and execute it. Edit the folder name `YYMMDD_ANALYSIS_01_TAXPROFILER` based on the number of analyses to be performed. If only one host exists, it shall be set as `YYMMDD_ANALYSIS_02_TAXPROFILER`.
 
 Copy the contents of the service folders to scratch. To do this, run the **scratch** tool from buisciii-tools.
 
-    $ bu-isciii scratch --direction service_to_scratch SRVCNMXXX.X
+    $ buisciii scratch --direction service_to_scratch SRVCNMXXX.X
 
-Once finished, move to the newly copied service folder in scratch (its mounted path in scratch_tmp) `/data/bi/scratch_tmp/bi/`. Access the `ANALYSIS` folder and at this point, you will need to launch the pipeline once for each host successively. Access the folder of the first existing host (e.g., `YYYYMMDD_ANALYSIS01_METAGENOMIC_HUMAN`).
+Once finished, move to the newly copied service folder in scratch (its mounted path in scratch_tmp) `/data/ucct/bi/scratch_tmp/bi/`. Access the `ANALYSIS` folder and at this point, you will need to launch the pipeline once for each host successively. Access the folder of the first existing host (e.g., `YYYYMMDD_ANALYSIS01_METAGENOMIC_HUMAN`).
 
 Check the lablog and execute it.
 
@@ -42,6 +71,8 @@ This script generates different scripts that must be executed in an orderly mann
 > Note: remember to load the necessary modules and environments specified in the lablog, for the correct execution of this script and the following ones.
 
     $ bash _01_run_<reference1>.sh
+
+**In case there are several references to analize and, therefore, several `_01_run_<reference1>.sh.` files to run, you can alternatively run the `_00_autorun.sh` script.** This script automates the sequential execution of all `_01_run_<reference1>.sh.` files, and stores information about the status of the process in a log file. When the execution of the script is finished, it is recommended to check the logs of each reference individually, in order to verify that every process was completed properly, or, if not, to troubleshoot any problems that may have occurred.
 
 ---
 
@@ -75,7 +106,7 @@ Once the pipelines have been executed for all references, you can continue with 
 Once finished, repeat the process if there are any other host.
 
 > [!WARNING]
-> If there is more than 1 host, please remember to use the appropriate kraken database. Full info on which organisms are associated with each kraken database can be found in **`/data/bi/references/kraken/README`**.
+> If there is more than 1 host, please remember to use the appropriate kraken database. Full info on which organisms are associated with each kraken database can be found in **`/data/ucct/bi/references/kraken/README`**.
 
 ---
 
@@ -89,10 +120,7 @@ On completion of the pipeline, it is strongly recommended to review different fi
 
 ---
 
-In the meantime, you can access the `YYMMDD_ANALYSIS_0X_MAG` folder and execute the process following its [manual](https://github.com/BU-ISCIII/BU-ISCIII/wiki/MAG-service).
-
-> [!WARNING]
-> Please take into account that, if there are both samples with **single-end reads** and **paired-end reads** associated with the service, you'll have to run **MAG** for single-end and paired-end reads **separately** (use the `--single_end` parameter when running MAG with the samples that contain single-end reads).
+**In the meantime, you can access the `YYMMDD_ANALYSIS_0X_TAXPROFILER` folder and execute the process following its [**manual**](https://github.com/BU-ISCIII/BU-ISCIII/wiki/Taxprofiler-service).**
 
 If the pipeline has **successfully finished**, move to the `../RESULTS` folder.
 
@@ -100,26 +128,32 @@ Check the lablog and execute it.
 
     $ bash lablog_viralrecon_results
 
-Access the newly created folder and execute the scripts in order.
+Then access the newly created folder and execute the scripts in order.
+This lablog (and the scripts inside the new folder) gathers all the files containing the results and statistics of the analyses carried out during the viralrecon pipeline. It creates folders corresponding to different processes (mapping, assembly, annotation) and symbolic links to the main files (mapping_illumina.xlsx, variants_long_table.xlsx, multiqc_report.html and pangolin and nextclade reports). Finally, the `excel_generator.py` script will convert the csv files to xlsx format.
 
 > [!WARNING]
 > If the researcher asked you to provide them with the **reads without host**, create a folder within `/RESULTS/*_entrega01/`, and copy these reads inside this folder, so that the researcher can find them easily.
 
 If everything is correct and the necessary files and links have been generated, you can proceed with the service completion. To do this, execute the finish module of buisciii-tools.
 
-    $ bu-isciii finish SRVCNMXXX.X
+    $ buisciii finish SRVCNMXXX.X
 
-This module will do several things. First, it cleans up the folder, removing all the folders and files than are not longer needed and take up a considerable amount of storage space. Then it copies all the service files back to its `/data/bi/services_and_colaborations/CNM/virology/` folder, and also copies the content of this service to the researcher's sftp repository.
+This module will do several things. First, it cleans up the folder, removing all the folders and files than are not longer needed and take up a considerable amount of storage space. Then it copies all the service files back to its `/data/ucct/bi/services_and_colaborations/CNM/virology/` folder, and also copies the content of this service to the researcher's sftp repository.
 
-In order to complete the delivery of results to the researcher, you need to run the bioinfo-doc module of the buisciii-tools. To do so, you have to unlogin your HPC user and run it directly from your WS, where you have mounted the `/data/bioinfo_doc/` folder.
+In order to complete the delivery of results to the researcher, you need to run the bioinfo-doc module of the buisciii-tools. To do so, you have to unlogin your HPC user and run it directly from your WS, where you have mounted the `/data/ucct/bioinfo_doc/` folder.
 
-    $ bu-isciii bioinfo-doc SRVCNMXXX.X
+    $ buisciii bioinfo-doc SRVCNMXXX.X
 
-This module will be executed twice. First time select the service_info option, and the next time select the delivery option. There is the option to add delivery notes (by prompt or by providing a file) during its execution.
+This module will be executed twice. First time select the `service_info` option, and the next time select the `delivery` option. There is the option to add delivery notes (by prompt or by providing a file) during its execution.
+
+>[!WARNING]
+>When running the `delivery` mode of the `bioinfo_doc` module, you will be asked for **delivery notes** and **email notes**. **THESE ARE NOT THE SAME THING**. After running the `service_info` mode of this module, you'll see a folder for the service will have been created in `bioinfo_doc`. There, you can for example create two files: `delivery_notes.txt` and `email_notes.txt`. Edit these two files, and add the following information in each one of them:
+>* `delivery_notes.txt`: `Results were delivered in the SFTP.` (literally)
+>* `email_notes.txt`: everything you want the researcher to be aware of.
 
 Lastly, remember to remove all the files related to this service from `scratch_tmp`:
 
-    $ bu-isciii scratch SRVCNMXXX.X
+    $ buisciii scratch SRVCNMXXX.X
     > remove_scratch
 
 ---
@@ -140,7 +174,7 @@ Lastly, remember to remove all the files related to this service from `scratch_t
 If the reference selected for the service has changed, it is quite likely that your primers now land on different positions of the genome. Therefore, you will need to create a new bed file with the new coordinates.
 
 To do so, you can use blast in order to align your sequences to your reference:
-`blastn -num_threads 10 -evalue 1 -task 'blastn-short' -subject /data/bi/references/virus/RSV/your_reference.fasta -query primers.fasta -out blast.txt -outfmt '6 stitle std slen qlen qcovs' -num_alignments 1`
+`blastn -num_threads 10 -evalue 1 -task 'blastn-short' -subject /data/ucct/bi/references/virus/RSV/your_reference.fasta -query primers.fasta -out blast.txt -outfmt '6 stitle std slen qlen qcovs' -num_alignments 1`
 
 This will generate a series of alignments with your primers sequences in `blast.txt`. Lets add a header so it's easier to understand:
 
@@ -148,15 +182,13 @@ This will generate a series of alignments with your primers sequences in `blast.
 
 **Note:** You need only one row per primer in your scheme.bed but you will most likely find some queries that don't match exactly with the reference. In these cases you should try to select the ones with the `length` as close to the `qlen` as possible but keeping the `pident` as high as possible too (try to find a balance between the two metrics)
 
-Once you have selected the corresponding lines, you can execute an auxiliar script called `blast_parser.py` (you may find it in `/data/bi/references/auxiliar_scripts/`) to do the rest of the work:
+Once you have selected the corresponding lines, you can execute an auxiliar script called `blast_parser.py` (you may find it in `/data/ucct/bi/references/auxiliar_scripts/`) to do the rest of the work:
 ```python3 blast_parser.py blast_mod.txt scheme.bed```
 
 ---
 
 ### Common errors while running the service
 * Make sure that `samples_ref` file does not contain any spaces as it's read as a tab-separated file. You can use `cat -A samples_ref.txt` to ensure this (`\t` is shown as `^I` in this case).
-  
-* When there's a mix of full-numerical and strings in sample IDs (e.g. `87439.fastq.gz` and `SARS_01.fastq.gz`) the pipeline may crush in `MULTIQC` step. This is caused because there's a bug with MultiQC ([MultiQC issue](https://github.com/nf-core/viralrecon/issues/345)) that can be temporarily fixed by adding any non-numerical character to the sample IDs. Nevertheless, you can follow the instructions in [this tutorial](https://drive.google.com/drive/u/0/folders/1-GafpZR2HVlecNaAsXIslK3aecHplD4z) to properly correct this error.
 
 * When running `bash _01_run_<reference1>.sh` and checking the `.log` file, you might see the following message related with Bowtie2, where `XXX` is the number of mapped reads against the reference for each sample:
     > -[nf-core/viralrecon] X samples skipped since they failed Bowtie2 1000 mapped read threshold: <br> XXX: SAMPLE1 <br> XXX: SAMPLE2 <br> ... </br>
@@ -208,6 +240,4 @@ The no host reads will be inside **`/*_mapping/kraken2/`** for each host and eac
 - **Calidad general**: Buena
 - **Incidencia muestras individuales**:
     - 2 muestras no consiguen mapear (CONTROLNEGATIVO y POSUL54). Tienen muy pocas lecturas, baja calidad y elevado porcentaje de secuencias sobrerrepresentadas.
-  
-
 ---

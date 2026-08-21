@@ -20,6 +20,8 @@ See [[Data Structure]].
 
 Download the latest LTS version from [ubuntu.com](https://ubuntu.com/download/desktop).
 
+> **Note:** *For the moment, it is recommended installing [22.04.5 LTS ubuntu version](https://releases.ubuntu.com/22.04/?_ga=2.34887202.2033516692.1736508482-451044865.1736508482&_gl=1*qqnjfr*_gcl_au*MTc4NjEyOTkxNC4xNzM2NTA4NDgz) to prevent compatibility conflicts.*
+
 In your Linux server open the "startup disk Creation" tool to create a bootable USB disk.
 
 ## Clean installation
@@ -28,61 +30,119 @@ In your Linux server open the "startup disk Creation" tool to create a bootable 
 
 When server is planned for computation propose, the installation settings are different to prevent for one side that critical partitions could full by user data and for other hand to install software packets for this propose.
 
-During software installation, before running the installation GUI:
+Once your machine has been rebooted with the bootable disk plugged in, and the boot mode has been chosen, you will see the language selection menu followed by Ubuntu’s boot options. Then, before running the installation itself, click the "**Try Ubuntu**" button as shown in the image below.
 
-- Open gparted in your WS
+![image](https://github.com/BU-ISCIII/BU-ISCIII/blob/main/images/Tryubuntu.png)
+
+As soon as the demo OS is loaded, open the Gparted software.
+First, select the corresponding disk in the top right corner. If you are using a machine with the Linux operating system pre-installed, you will see something similar to this:
+
+![image](https://github.com/BU-ISCIII/BU-ISCIII/blob/main/images/ws_1diskselection.png)
+
+In this case, you must select **/dev/nvme0n1** disk.
+
+> **Note:** *The name of the disc may differ from the one shown in the image.*
+
+The screen now will show the partitions of the selected disc.
+
+![image](https://github.com/BU-ISCIII/BU-ISCIII/blob/main/images/ws_2partitions.png)
+
+Since you are installing a native Ubuntu SO, you can delete all existing partitions. Note that doing this will erase all the information on the disk, so if you wish to preserve that data, consider making a backup beforehand.
+
+Select and delete partitions. Then click the "apply all operations" button. You will see now all the free space unallocated.
+
+![image](https://github.com/BU-ISCIII/BU-ISCIII/blob/main/images/ws_3erasedbeforeadd.png)
+
+You can now create new partitions by clicking on the ‘New’ option in the newly freed space.
+
+![image](https://github.com/BU-ISCIII/BU-ISCIII/blob/main/images/ws_5newpartition.png)
+
+- Now, create 3 new partitions as follows:
     1. Create swap primary partition at the end of the disk (8000 MB). Select filesystem as ext4 and partition name and label as _swap_.
+
+    <div style="text-align: center;">
+      <img src="https://github.com/BU-ISCIII/BU-ISCIII/blob/main/images/ws_6swap.png" alt="image">
+    </div>
+
     2. Create primary partition destined to the EFI (2000 MB). Select FAT32 as filesystem, and label it _efi_.
+
+    <div style="text-align: center;">
+      <img src="https://github.com/BU-ISCIII/BU-ISCIII/blob/main/images/ws_7efi.png" alt="image">
+    </div>
+
     3. Create pvolume with the rest of disk space. Select as filesystem lvm2 pv, and as partition name and label pvolume.(Remaining space)
-    4. Create vgroup and lvolumes with the command line as follows, where <vgroup> is "vg_<your_pc_name>", and <your_pc_name> is "pc" followed by the numeric code on the isciii's label of the physical machine:
+
+    <div style="text-align: center;">
+      <img src="https://github.com/BU-ISCIII/BU-ISCIII/blob/main/images/ws_8pvolume.png" alt="image">
+    </div>
+
+Once the partitions have been created, apply the changes and then close Gparted.
+
+![image](https://github.com/BU-ISCIII/BU-ISCIII/blob/main/images/ws_9partitionscreatedafteradding.png)
+
+
+Now create vgroup and lvolumes with the command line as follows, where <vgroup> is "vg_<your_pc_name>", and <your_pc_name> is "PC" followed by the numeric code on the isciii's label of the physical machine (*e.g. vg_PC-XXXXX*). First of all, run the command "pvdisplay" with root privileges to get the name of your computer's physical volume (PV).
 
 ```Bash
-pvdisplay
-vgcreate <vgroup> /dev/sda3
-lvcreate -L 20G -n lv_root <vgroup>
-lvcreate -L [whatever space you want to assign to your home]T -n lv_home <vgroup> # Left some space free so you can reassign this space in whatever partition you need in the future.
-lvcreate -L 30G -n lv_opt <vgroup>
-lvcreate -L 20G -n lv_tmp <vgroup>
-lvcreate -L 20G -n lv_var <vgroup>
-lvcreate -L 2G -n lv_var_log <vgroup>
-lvcreate -L 20G -n lv_root_all <vgroup>
+sudo pvdisplay
 ```
+
+Take the "PV Name" and substitute it in the next command:
+
+```Bash
+sudo vgcreate <vgroup> <PV Name>
+```
+
+Finally, allocate space for the logical volumes.
+
+```Bash
+sudo lvcreate -L 20G -n lv_root <vgroup>
+sudo lvcreate -L [whatever space you want to assign to your home]G -n lv_home <vgroup> # Left some space free so you can reassign this space in whatever partition you need in the future.
+sudo lvcreate -L 30G -n lv_opt <vgroup>
+sudo lvcreate -L 20G -n lv_tmp <vgroup>
+sudo lvcreate -L 20G -n lv_var <vgroup>
+sudo lvcreate -L 2G -n lv_var_log <vgroup>
+sudo lvcreate -L 20G -n lv_root_all <vgroup>
+```
+
+This is an example of PV creation from the command line.
+
+<div style="text-align: center;">
+  <img src="https://github.com/BU-ISCIII/BU-ISCIII/blob/main/images/ws_logicalvolumes.png" alt="image">
+</div>
+
+After completing all this configuration, proceed with the installation of the operating system by clicking on the icon in the lower right corner of the desktop.
+
+![image](https://github.com/BU-ISCIII/BU-ISCIII/blob/main/images/ws_continueinstallation.png)
 
 Then, in the installation GUI select the following options:
 
-- Which applications would you like to start with?
-  - **Minimal installation**
-- Other options
-  - Click on the Download updates while installing
-- Click Install third-party software for graphics and Wi-Fi hardware
-- Installation type menu.
-  - Where would you like to install ?
-    - Click on **Manual**
-    - Install your favourite Linux distribution on top of those partitions (SSD if exist), assigning the following mounting points:
-
-```Bash
-efi         -> efi      (FAT32)
-lv_root_all -> /        (ext4)
-lv_root     -> /root    (ext4)
-lv_home     -> /home    (ext4)
-lv_opt      -> /opt     (ext4)
-lv_tmp      -> /tmp     (ext4)
-lv_var      -> /var     (ext4)
-lv_var_log  -> /var/log (ext4)
-swap        -> swap     (linux_swap)
-```
-
-- During software installation, select the following options:
-
-1. _Welcome_: Select `English` in the left panel and `install Ubuntu`
+1. _Welcome_: Select `English` in the left panel and `Continue`
 2. _Keyboard layout_: `Spanish` > `Spanish`
 3. _Updates and other software_: Select:
-    - `Normal installation`
+    - `Minimal installation`
     - `Install third-party software`...
 4. _Installation Type_: Select:
-    - `Erase Ubuntu and reinstall`
-    - `Install Now`
-    - `Continue` in the new window
+    - `Something else`
+    - `Continue`
+
+    Now you will assign every mounting point to the PV previously created. In the next window (Instalation type), select each volume one at time and then click de button `Change` for opening the pop-up window where the following settings will be applied:
+
+    ```Bash
+                Mount point   Use as
+    efi         ->  -             (EFI System Partition)
+    lv_root_all ->  /             (ext4)
+    lv_root     ->  /root         (ext4)
+    lv_home     ->  /home         (ext4)
+    lv_opt      ->  /opt          (ext4)
+    lv_tmp      ->  /tmp          (ext4)
+    lv_var      ->  /var          (ext4)
+    lv_var_log  ->  /var/log      (ext4)
+    swap        ->  -             (swap area)
+    ```
+
+    - `Continue`
+
 5. _Where are you_: `Madrid`
 6. Who are you?:
     - Your name: `bioinfoadm`
@@ -92,48 +152,49 @@ swap        -> swap     (linux_swap)
     - Require my password to log in
     - Continue
 
+
 ## Steps after OS installation
 
 ### Users and groups
 
-1. Create the following groups replacing the gid values for the ones defined in axterix:
+1. Create the following group replacing the gid value for the one defined in portutatis:
 
 ```Bash
 sudo addgroup bioinfo
 sudo groupmod -g <gid_bioinfo> bioinfo
-sudo addgroup sshaccess
-sudo groupmod -g <gid_sshaccess> sshaccess
-sudo addgroup bioinfoaccess
-sudo groupmod -g <gid_bioinfoaccess> bioinfoaccess
 ```
 
-2. Add bioinfoadm user to the groups
+Ask a teammate for the gid he/she has configured in his/her WS. It can be obtained running the following command:
 
 ```Bash
-sudo usermod -a -G bioinfoaccess bioinfoadm
-sudo usermod -a -G sshaccess bioinfoadm
+cat /etc/group | grep "bioinfo:x" | cut -d':' -f3
+```
+
+2. Add bioinfoadm user to the group
+
+```Bash
 sudo usermod -a -G bioinfo bioinfoadm
 ```
 
 3. Create your user `<user>` and add the following groups
 
-3.1 If your user name is already defined in asterix use the same uid and gid as in asterix
+3.1 If your user name is already defined in portutatis, use the same uid and gid as in portutatis.
 
 ```Bash
 sudo adduser <user> -u <uid>
-sudo usermod -a -G bioinfoaccess,sshaccess,bioinfo,sudo <user>
+sudo usermod -a -G bioinfo,sudo <user>
 sudo groupmod -g <gid> <user>
 ```
 
-3.2 If you do not have user account in asterix yet, do the following:
+3.2 If you do not have user account in portutatis yet, do the following:
 
 ```Bash
 sudo adduser <user>
-sudo usermod -a -G bioinfoaccess,sshaccess,bioinfo,sudo <user>
+sudo usermod -a -G bioinfo,sudo <user>
 ```
 
-3.2.1 If you get your user account in asterix after some time using your server, perform the following:
-Use `id <user>` logged in asterix to know your assigned uid and gid, and change them in your local machine:
+3.2.1 If you get your user account in portutatis after some time using your server, perform the following:
+Use `id <user>` logged in portutatis to know your assigned uid and gid, and change them in your local machine:
 
 ```Bash
 usermod -u <uid> <user>
@@ -225,11 +286,38 @@ mkdir -p /media/backup
 ```
 
 4. Open BackInTime in your machine and create the following backup plan:
-![](https://raw.githubusercontent.com/BU-ISCIII/BU-ISCIII/master/images/backintime_general.png)
+![](https://raw.githubusercontent.com/BU-ISCIII/BU-ISCIII/main/images/backintime_general.png)
 5. Select your home folder in the include tab, and whatever you want to exclude in the correspondent tab.
 6. In autoremove, set it to this:
-![](https://raw.githubusercontent.com/BU-ISCIII/BU-ISCIII/master/images/backintime_autoremove.png)
+![](https://raw.githubusercontent.com/BU-ISCIII/BU-ISCIII/main/images/backintime_autoremove.png)
 7. Click ok and done! Create your first one on demand to check if everything works.
+
+## Keep ssh sessions alive
+
+Portutatis will kick you out every time you keep your connection idle for a set period of time. To avoid this annoying feature of the firewall, you can modify your ssh connection settings to send NULL packages every X seconds, which will keep your connection up and running.
+
+How you do it, depends on the tool you are using for ssh-ing. I will explain the modifications you have make in the most broadly used tools to send a keep-alive signal every 5 minutes.
+
+### SHH
+
+Add the following lines to your "/etc/ssh/ssh_config" file `sudo nano /etc/ssh/ssh_config`
+
+```
+# Keep alive
+Host *
+    ServerAliveInterval 300
+    ServerAliveCountMax 2
+```
+
+Now restart ssh service:
+
+```
+sudo service ssh restart
+```
+
+### PUTTY
+
+In your session properties, go to Connection and under Sending of null packets to keep session active, set Seconds between keepalives to 300.
 
 ## Configure printers
 
